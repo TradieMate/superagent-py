@@ -1,14 +1,12 @@
 services:
   - type: web
-    name: superagent-sdk-demo
+    name: superagent-py
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python app.py
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: PORT
-        value: 10000
       - key: SUPERAGENT_API_TOKEN
-        sync: false  # This will need to be set manually in Render dashboard
+        sync: false  # Set this in Render dashboard
       - key: SUPERAGENT_BASE_URL
         value: https://api.beta.superagent.sh
     healthCheckPath: /health
