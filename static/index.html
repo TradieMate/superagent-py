@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Superagent SDK Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .response {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🥷 Superagent SDK Demo</h1>
+        <p>This demo showcases the Superagent Python SDK functionality through a simple web interface.</p>
+        
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <strong>⚠️ Configuration Required:</strong> 
+            To use the API endpoints, set <code>SUPERAGENT_API_TOKEN</code> in your Render environment variables.
+            <br><small>Get your token from <a href="https://superagent.sh" target="_blank">Superagent Cloud</a></small>
+        </div>
+        
+        <div class="section">
+            <h3>Health Check</h3>
+            <button onclick="checkHealth()">Check API Health</button>
+            <div id="healthResponse" class="response" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h3>Create Agent</h3>
+            <input type="text" id="agentName" placeholder="Agent Name" value="Demo Agent">
+            <textarea id="agentDescription" placeholder="Agent Description">A helpful AI assistant for demonstration purposes</textarea>
+            <input type="text" id="agentPrompt" placeholder="Agent Prompt" value="You are a helpful assistant">
+            <button onclick="createAgent()">Create Agent</button>
+            <div id="createResponse" class="response" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h3>List Agents</h3>
+            <button onclick="listAgents()">List All Agents</button>
+            <div id="listResponse" class="response" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h3>Invoke Agent</h3>
+            <input type="text" id="agentId" placeholder="Agent ID">
+            <textarea id="userInput" placeholder="Your message to the agent">Hello! How can you help me today?</textarea>
+            <button onclick="invokeAgent()">Send Message</button>
+            <div id="invokeResponse" class="response" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        async function makeRequest(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                const result = await response.json();
+                
+                return { success: response.ok, data: result, status: response.status };
+            } catch (error) {
+                return { success: false, data: { detail: error.message }, status: 500 };
+            }
+        }
+
+        function displayResponse(elementId, response) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `response ${response.success ? 'success' : 'error'}`;
+            element.textContent = JSON.stringify(response.data, null, 2);
+        }
+
+        async function checkHealth() {
+            const response = await makeRequest('/health');
+            displayResponse('healthResponse', response);
+        }
+
+        async function createAgent() {
+            const data = {
+                name: document.getElementById('agentName').value,
+                description: document.getElementById('agentDescription').value,
+                prompt: document.getElementById('agentPrompt').value
+            };
+            
+            const response = await makeRequest('/agents', 'POST', data);
+            displayResponse('createResponse', response);
+            
+            // If successful, populate agent ID for invoke section
+            if (response.success && response.data.agent) {
+                document.getElementById('agentId').value = response.data.agent.id;
+            }
+        }
+
+        async function listAgents() {
+            const response = await makeRequest('/agents');
+            displayResponse('listResponse', response);
+        }
+
+        async function invokeAgent() {
+            const data = {
+                agent_id: document.getElementById('agentId').value,
+                input: document.getElementById('userInput').value
+            };
+            
+            if (!data.agent_id) {
+                displayResponse('invokeResponse', { 
+                    success: false, 
+                    data: { detail: 'Please provide an Agent ID' } 
+                });
+                return;
+            }
+            
+            const response = await makeRequest('/agents/invoke', 'POST', data);
+            displayResponse('invokeResponse', response);
+        }
+
+        // Check health on page load
+        window.onload = function() {
+            checkHealth();
+        };
+    </script>
+</body>
+</html>
