@@ -58,16 +58,19 @@ class HealthResponse(BaseModel):
 
 # Initialize Superagent client
 def get_superagent_client():
-    token = os.getenv("SUPERAGENT_API_TOKEN")
+    token = os.getenv("SUPERAGENT_API_TOKEN", "demo-token-not-configured")
     base_url = os.getenv("SUPERAGENT_BASE_URL", "https://api.beta.superagent.sh")
     
-    if not token:
-        raise HTTPException(
-            status_code=500, 
-            detail="SUPERAGENT_API_TOKEN environment variable is required"
-        )
-    
     return Superagent(token=token, base_url=base_url)
+
+def check_token_configured():
+    """Check if API token is properly configured"""
+    token = os.getenv("SUPERAGENT_API_TOKEN")
+    if not token or token == "demo-token-not-configured":
+        raise HTTPException(
+            status_code=400, 
+            detail="SUPERAGENT_API_TOKEN not configured. Please set this environment variable in Render dashboard."
+        )
 
 @app.get("/")
 async def root():
@@ -85,23 +88,16 @@ async def api_root():
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Detailed health check"""
-    try:
-        # Test if we can initialize the client
-        client = get_superagent_client()
-        return HealthResponse(
-            status="healthy",
-            message="Superagent SDK is properly configured"
-        )
-    except Exception as e:
-        return HealthResponse(
-            status="unhealthy",
-            message=f"Configuration error: {str(e)}"
-        )
+    return HealthResponse(
+        status="healthy",
+        message="Superagent SDK Demo is running"
+    )
 
 @app.post("/agents")
 async def create_agent(request: AgentCreateRequest):
     """Create a new agent"""
     try:
+        check_token_configured()
         client = get_superagent_client()
         agent = client.agent.create(request={
             "name": request.name,
@@ -120,6 +116,7 @@ async def create_agent(request: AgentCreateRequest):
 async def invoke_agent(request: AgentInvokeRequest):
     """Invoke an agent with input"""
     try:
+        check_token_configured()
         client = get_superagent_client()
         output = client.agent.invoke(
             agent_id=request.agent_id,
@@ -137,6 +134,7 @@ async def invoke_agent(request: AgentInvokeRequest):
 async def list_agents():
     """List all agents"""
     try:
+        check_token_configured()
         client = get_superagent_client()
         agents = client.agent.list()
         return {"success": True, "agents": agents}
